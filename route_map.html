@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Encoded Polyline Map</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    function decodePolyline(encoded, precision = 5) {
+      const coordinates = [];
+      const scale = 10 ** precision;
+      let index = 0;
+      let latitude = 0;
+      let longitude = 0;
+
+      while (index < encoded.length) {
+        const deltas = [];
+
+        for (let point = 0; point < 2; point++) {
+          let result = 0;
+          let shift = 0;
+          let value;
+
+          do {
+            if (index >= encoded.length) {
+              throw new Error("Incomplete encoded polyline");
+            }
+
+            value = encoded.charCodeAt(index++) - 63;
+            result |= (value & 0x1f) << shift;
+            shift += 5;
+          } while (value >= 0x20);
+
+          deltas.push(result & 1 ? ~(result >> 1) : result >> 1);
+        }
+
+        latitude += deltas[0];
+        longitude += deltas[1];
+        coordinates.push([latitude / scale, longitude / scale]);
+      }
+
+      return coordinates;
+    }
+
+    // Replace this with your encoded polyline.
+    const encoded = "_p~iF~ps|U_ulLnnqC_mqNvxq`";
+    const points = decodePolyline(encoded);
+
+    const map = L.map("map");
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    const route = L.polyline(points, {
+      color: "blue",
+      weight: 5
+    }).addTo(map);
+
+    L.marker(points[0]).bindPopup("Start").addTo(map);
+    L.marker(points[points.length - 1]).bindPopup("End").addTo(map);
+    map.fitBounds(route.getBounds());
+  </script>
+</body>
+</html>
